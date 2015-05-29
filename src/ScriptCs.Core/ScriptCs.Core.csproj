@@ -54,6 +54,7 @@
     <Compile Include="Extensions\MethodInfoExtensions.cs" />
     <Compile Include="FileSystemMigrator.cs" />
     <Compile Include="NullScriptLibraryComposer.cs" />
+    <Compile Include="ReplCommands\DescribeCommand.cs" />
     <Compile Include="ReplCommands\ScriptPacksCommand.cs" />
     <Compile Include="Extensions\TypeExtensions.cs" />
     <Compile Include="ScriptLibraryComposer.cs" />

@@ -30,6 +30,11 @@ namespace ScriptCs.Engine.Mono
 
         public ILog Logger { get; set; }
 
+        public System.Type GetLocalVariableType(ScriptPackSession scriptPackSession, string variableName)
+        {
+            throw new NotImplementedException("Need to write this for mono");
+        }
+
         public ICollection<string> GetLocalVariables(ScriptPackSession scriptPackSession)
         {
             if (scriptPackSession != null && scriptPackSession.State.ContainsKey(SessionKey))
