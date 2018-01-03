@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Moq;
-using Ploeh.AutoFixture.Xunit;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using ScriptCs.Tests;
 using Should;
-using Xunit.Extensions;
+using Xunit;
+using Ploeh.AutoFixture.Xunit2;
 
 namespace ScriptCs.Hosting.Tests
 {
@@ -24,9 +23,9 @@ namespace ScriptCs.Hosting.Tests
             }
 
             [Theory, ScriptCsAutoData]
-            public void ShouldLoadScriptPacksIfReplIsTrue(IConsole console, ILog logger, IScriptEngine engine)
+            public void ShouldLoadScriptPacksIfReplIsTrue(IConsole console, TestLogProvider logProvider, IScriptEngine engine)
             {
-                var builder = new ScriptServicesBuilder(console, logger);
+                var builder = new ScriptServicesBuilder(console, logProvider);
                 builder.Overrides[typeof(IScriptEngine)] = engine.GetType();
                 builder.Repl();
                 builder.Build();
@@ -35,9 +34,9 @@ namespace ScriptCs.Hosting.Tests
             }
 
             [Theory, ScriptCsAutoData]
-            public void ShouldLoadScriptPacksIfScriptNameIsSet(IConsole console, ILog logger, IScriptEngine engine)
+            public void ShouldLoadScriptPacksIfScriptNameIsSet(IConsole console, TestLogProvider logProvider, IScriptEngine engine)
             {
-                var builder = new ScriptServicesBuilder(console, logger);
+                var builder = new ScriptServicesBuilder(console, logProvider);
                 builder.Overrides[typeof(IScriptEngine)] = engine.GetType();
                 builder.ScriptName("");
                 builder.Build();
@@ -46,9 +45,9 @@ namespace ScriptCs.Hosting.Tests
             }
 
             [Theory, ScriptCsAutoData]
-            public void ShoulLoadScriptPacksIfLoadScriptPacksIsTrue(IConsole console, ILog logger, IScriptEngine engine)
+            public void ShoulLoadScriptPacksIfLoadScriptPacksIsTrue(IConsole console, TestLogProvider logProvider, IScriptEngine engine)
             {
-                var builder = new ScriptServicesBuilder(console, logger);
+                var builder = new ScriptServicesBuilder(console, logProvider);
                 builder.Overrides[typeof(IScriptEngine)] = engine.GetType();
                 builder.LoadScriptPacks();
                 builder.Build();
@@ -57,9 +56,9 @@ namespace ScriptCs.Hosting.Tests
             }
 
             [Theory, ScriptCsAutoData]
-            public void ShouldNotLoadScriptPacksIfLoadScriptPacksIsFalse(IConsole console, ILog logger, IScriptEngine engine)
+            public void ShouldNotLoadScriptPacksIfLoadScriptPacksIsFalse(IConsole console, TestLogProvider logProvider, IScriptEngine engine)
             {
-                var builder = new ScriptServicesBuilder(console, logger);
+                var builder = new ScriptServicesBuilder(console, logProvider);
                 builder.Overrides[typeof(IScriptEngine)] = engine.GetType();
                 builder.LoadScriptPacks(false);
                 builder.Build();
@@ -111,7 +110,7 @@ namespace ScriptCs.Hosting.Tests
             }
 
             [Theory, ScriptCsAutoData]
-            public void ShouldFindAllModulesInTheFileSystem([Frozen] Mock<ITypeResolver> typeResolver, [Frozen] Mock<IModuleLoader> moduleLoader, [Frozen] Mock<IFileSystem> fileSystem, [Frozen] Mock<IInitializationServices> initializationServices, ScriptServicesBuilder builder)
+            public void ShouldFindAllModulesInTheFileSystem([Frozen] Mock<ITypeResolver> typeResolver, [Frozen] Mock<IModuleLoader> moduleLoader, [Frozen] Mock<IFileSystem> fileSystem, [Frozen] Mock<IInitializationServices> initializationServices)
             {
                 typeResolver.Setup(r => r.ResolveType("Mono.Runtime")).Returns((Type)null);
                 fileSystem.SetupGet(fs => fs.GlobalFolder).Returns(@"c:\modules");

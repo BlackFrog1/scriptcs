@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Versioning;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
+using ScriptCs.Hosting.Package;
 
 namespace ScriptCs.Command
 {
@@ -26,7 +26,7 @@ namespace ScriptCs.Command
             IPackageAssemblyResolver packageAssemblyResolver,
             IPackageInstaller packageInstaller,
             IScriptLibraryComposer composer,
-            ILog logger)
+            ILogProvider logger)
         {
             _name = name;
             _version = version ?? string.Empty;
@@ -35,7 +35,7 @@ namespace ScriptCs.Command
             _packageAssemblyResolver = packageAssemblyResolver;
             _packageInstaller = packageInstaller;
             _composer = composer;
-            _logger = logger;
+            _logger = logger.ForCurrentType();
         }
 
         public CommandResult Execute()
@@ -63,7 +63,7 @@ namespace ScriptCs.Command
             }
             catch (Exception ex)
             {
-                _logger.ErrorFormat("Package installation failed: {0}.", ex, ex.Message);
+                _logger.ErrorException("Package installation failed.", ex);
                 return CommandResult.Error;
             }
         }
@@ -81,7 +81,7 @@ namespace ScriptCs.Command
                 yield break;
             }
 
-            yield return new PackageReference(_name, new FrameworkName(".NETFramework,Version=v4.0"), _version);
+            yield return new PackageReference(_name, new FrameworkName(FrameworkUtils.FrameworkName), _version);
         }
     }
 }

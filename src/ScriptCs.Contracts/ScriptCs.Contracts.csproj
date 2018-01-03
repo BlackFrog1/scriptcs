@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -10,16 +10,18 @@
     <AssemblyName>ScriptCs.Contracts</AssemblyName>
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <FileAlignment>512</FileAlignment>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile />
+    <TargetFrameworkVersion>v4.6.1</TargetFrameworkVersion>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\..\</SolutionDir>
+    <WarningsNotAsErrors>414</WarningsNotAsErrors>
+    <LangVersion>7</LangVersion>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
     <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DefineConstants>DEBUG;TRACE;LIBLOG_PROVIDERS_ONLY</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>..\..\ScriptCs.ruleset</CodeAnalysisRuleSet>
@@ -28,7 +30,7 @@
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
+    <DefineConstants>TRACE;LIBLOG_PROVIDERS_ONLY</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <CodeAnalysisRuleSet>..\..\ScriptCs.ruleset</CodeAnalysisRuleSet>
@@ -44,11 +46,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="App_Packages\LibLog.4.2\LibLog.cs">
+      <ExcludeFromStyleCop>true</ExcludeFromStyleCop>
+    </Compile>
     <Compile Include="AssemblyReferences.cs" />
     <Compile Include="BehaviorAfterCode.cs" />
     <Compile Include="..\ScriptCs.Core\Guard.cs">
       <Link>Guard.cs</Link>
     </Compile>
+    <Compile Include="DefaultLogProvider.cs" />
     <Compile Include="FileSystemExtensions.cs" />
     <Compile Include="IAppDomainAssemblyResolver.cs" />
     <Compile Include="IDirectiveLineProcessor.cs" />
@@ -76,6 +82,7 @@
     <Compile Include="IPackageReference.cs" />
     <Compile Include="IRepl.cs" />
     <Compile Include="IScriptEnvironment.cs" />
+    <Compile Include="IScriptInfo.cs" />
     <Compile Include="IScriptLibraryComposer.cs" />
     <Compile Include="IReplCommand.cs" />
     <Compile Include="IReplEngine.cs" />
@@ -95,8 +102,15 @@
       <Link>Properties\CommonVersionInfo.cs</Link>
     </Compile>
     <Compile Include="IServiceOverrides.cs" />
+    <Compile Include="ILog.cs" />
+    <Compile Include="ILogProvider.cs" />
+    <Compile Include="LogExtensions.cs" />
+    <Compile Include="Logger.cs" />
     <Compile Include="LogLevel.cs" />
+    <Compile Include="LogProviderExtensions.cs" />
     <Compile Include="ModuleAttribute.cs" />
+    <Compile Include="Printers.cs" />
+    <Compile Include="ProjectItem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ScriptPack.cs" />
     <Compile Include="ScriptPackSession.cs" />

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 
 namespace ScriptCs
 {
@@ -16,19 +15,19 @@ namespace ScriptCs
         private readonly IPackageAssemblyResolver _packageAssemblyResolver;
         private readonly ILog _logger;
 
-        public ScriptLibraryComposer(IFileSystem fileSystem, IFilePreProcessor preProcessor, IPackageContainer packageContainer, IPackageAssemblyResolver packageAssemblyResolver, ILog logger)
+        public ScriptLibraryComposer(IFileSystem fileSystem, IFilePreProcessor preProcessor, IPackageContainer packageContainer, IPackageAssemblyResolver packageAssemblyResolver, ILogProvider logProvider)
         {
             Guard.AgainstNullArgument("fileSystem", fileSystem);
             Guard.AgainstNullArgument("preProcessor", preProcessor);
             Guard.AgainstNullArgument("packageContainer", packageContainer);
             Guard.AgainstNullArgument("packageAssemblyResolver", packageAssemblyResolver);
-            Guard.AgainstNullArgument("logger", logger);
+            Guard.AgainstNullArgument("logProvider", logProvider);
 
             _fileSystem = fileSystem;
             _preProcessor = preProcessor;
             _packageContainer = packageContainer;
             _packageAssemblyResolver = packageAssemblyResolver;
-            _logger = logger;
+            _logger = logProvider.ForCurrentType();
         }
 
         internal string GetMainScript(IPackageObject package)
@@ -43,7 +42,7 @@ namespace ScriptCs
             {
                 script = content[0];
             }
-            else if (content.Count() > 1)
+            else if (content.Length > 1)
             {
                 _logger.WarnFormat("Script Libraries in '{0}' ignored due to multiple Main files being present", package.FullName);
                 return null;
@@ -57,10 +56,7 @@ namespace ScriptCs
             return script;
         }
 
-        public virtual string ScriptLibrariesFile
-        {
-            get { return "ScriptLibraries.csx"; }
-        }
+        public virtual string ScriptLibrariesFile => "ScriptLibraries.csx";
 
         public void Compose(string workingDirectory, StringBuilder builder = null)
         {

@@ -35,9 +35,9 @@ namespace ScriptCs.Hosting
             this.AppendLine(value);
         }
 
-        public string ReadLine()
+        public string ReadLine(string prompt)
         {
-            var line = _innerConsole.ReadLine();
+            var line = _innerConsole.ReadLine("");
             this.AppendLine(line);
             return line;
         }
@@ -59,9 +59,11 @@ namespace ScriptCs.Hosting
 
         public ConsoleColor ForegroundColor
         {
-            get { return _innerConsole.ForegroundColor; }
-            set { _innerConsole.ForegroundColor = value; }
+            get => _innerConsole.ForegroundColor;
+            set => _innerConsole.ForegroundColor = value;
         }
+
+        public int Width => int.MaxValue;
 
         private void Append(string text)
         {

@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using NuGet;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using IFileSystem = ScriptCs.Contracts.IFileSystem;
 
 namespace ScriptCs.Hosting.Package
@@ -18,12 +17,13 @@ namespace ScriptCs.Hosting.Package
 
         private static readonly Version EmptyVersion = new Version();
 
-        public NugetInstallationProvider(IFileSystem fileSystem, ILog logger)
+        public NugetInstallationProvider(IFileSystem fileSystem, ILogProvider logProvider)
         {
             Guard.AgainstNullArgument("fileSystem", fileSystem);
+            Guard.AgainstNullArgument("logProvider", logProvider);
 
             _fileSystem = fileSystem;
-            _logger = logger;
+            _logger = logProvider.ForCurrentType();
         }
 
         public void Initialize()
@@ -31,7 +31,7 @@ namespace ScriptCs.Hosting.Package
             var path = Path.Combine(_fileSystem.CurrentDirectory, _fileSystem.PackagesFolder);
             _repositoryUrls = GetRepositorySources(path);
             var remoteRepository = new AggregateRepository(PackageRepositoryFactory.Default, _repositoryUrls, true);
-            _manager = new PackageManager(remoteRepository, path);
+            _manager = new ScriptCsPackageManager(remoteRepository, path);
         }
 
         public IEnumerable<string> GetRepositorySources(string path)
@@ -55,6 +55,9 @@ namespace ScriptCs.Hosting.Package
             }
 
             var sourceProvider = new PackageSourceProvider(settings);
+
+            HttpClient.DefaultCredentialProvider = new SettingsCredentialProvider(NullCredentialProvider.Instance, sourceProvider);
+
             var sources = sourceProvider.LoadPackageSources().Where(i => i.IsEnabled == true);
 
             if (sources == null || !sources.Any())
@@ -68,9 +71,10 @@ namespace ScriptCs.Hosting.Package
         public void InstallPackage(IPackageReference packageId, bool allowPreRelease = false)
         {
             Guard.AgainstNullArgument("packageId", packageId);
-
+            
             var version = GetVersion(packageId);
             var packageName = packageId.PackageId + " " + (version == null ? string.Empty : packageId.Version.ToString());
+
             _manager.InstallPackage(packageId.PackageId, version, allowPrereleaseVersions: allowPreRelease, ignoreDependencies: false);
             _logger.Info("Installed: " + packageName);
         }

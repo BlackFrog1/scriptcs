@@ -64,13 +64,29 @@ namespace ScriptCs.Command
                     scriptServices.FileSystem,
                     scriptServices.ScriptPackResolver,
                     scriptServices.Repl,
-                    scriptServices.Logger,
+                    scriptServices.LogProvider,
                     scriptServices.Console,
                     scriptServices.AssemblyResolver,
                     scriptServices.FileSystemMigrator,
                     scriptServices.ScriptLibraryComposer);
 
                 return explicitReplCommand;
+            }
+
+            if (config.Eval != null)
+            {
+                var executeLooseScriptCommand = new ExecuteLooseScriptCommand(
+                    config.Eval,
+                    scriptArgs,
+                    scriptServices.FileSystem,
+                    scriptServices.Executor,
+                    scriptServices.ScriptPackResolver,
+                    scriptServices.LogProvider,
+                    scriptServices.AssemblyResolver,
+                    scriptServices.FileSystemMigrator,
+                    scriptServices.ScriptLibraryComposer);
+
+                return executeLooseScriptCommand;
             }
 
             if (config.ScriptName != null)
@@ -89,7 +105,7 @@ namespace ScriptCs.Command
                         _initializationServices.GetPackageAssemblyResolver(),
                         _initializationServices.GetPackageInstaller(),
                         scriptServices.ScriptLibraryComposer,
-                        _initializationServices.Logger);
+                        _initializationServices.LogProvider);
 
                     var executeCommand = new DeferredCreationCommand<IScriptCommand>(() =>
                         CreateScriptCommand(
@@ -108,7 +124,7 @@ namespace ScriptCs.Command
                 var saveCommand = new SaveCommand(
                     _initializationServices.GetPackageAssemblyResolver(),
                     _fileSystem,
-                    _initializationServices.Logger);
+                    _initializationServices.LogProvider);
 
                 if (config.Global)
                 {
@@ -120,7 +136,7 @@ namespace ScriptCs.Command
                     }
                 }
 
-                var cleanCommand = new CleanCommand(config.ScriptName, _fileSystem, _initializationServices.Logger);
+                var cleanCommand = new CleanCommand(config.ScriptName, _fileSystem, _initializationServices.LogProvider);
 
                 return new CompositeCommand(saveCommand, cleanCommand);
             }
@@ -130,7 +146,7 @@ namespace ScriptCs.Command
                 return new SaveCommand(
                     _initializationServices.GetPackageAssemblyResolver(),
                     _fileSystem,
-                    _initializationServices.Logger);
+                    _initializationServices.LogProvider);
             }
 
             if (config.PackageName != null)
@@ -145,9 +161,9 @@ namespace ScriptCs.Command
                     packageAssemblyResolver,
                     _initializationServices.GetPackageInstaller(),
                     scriptServices.ScriptLibraryComposer,
-                    _initializationServices.Logger);
+                    _initializationServices.LogProvider);
 
-                var saveCommand = new SaveCommand(packageAssemblyResolver, _fileSystem, _initializationServices.Logger);
+                var saveCommand = new SaveCommand(packageAssemblyResolver, _fileSystem, _initializationServices.LogProvider);
 
                 return new CompositeCommand(installCommand, saveCommand);
             }
@@ -159,7 +175,7 @@ namespace ScriptCs.Command
                 scriptServices.FileSystem,
                 scriptServices.ScriptPackResolver,
                 scriptServices.Repl,
-                scriptServices.Logger,
+                scriptServices.LogProvider,
                 scriptServices.Console,
                 scriptServices.AssemblyResolver,
                 scriptServices.FileSystemMigrator,
@@ -177,7 +193,7 @@ namespace ScriptCs.Command
                     scriptArgs,
                     scriptServices.Console,
                     scriptServices.FileSystem,
-                    scriptServices.Logger,
+                    scriptServices.LogProvider,
                     scriptServices.FileSystemMigrator)
                 : new ExecuteScriptCommand(
                     config.ScriptName,
@@ -185,7 +201,7 @@ namespace ScriptCs.Command
                     scriptServices.FileSystem,
                     scriptServices.Executor,
                     scriptServices.ScriptPackResolver,
-                    scriptServices.Logger,
+                    scriptServices.LogProvider,
                     scriptServices.AssemblyResolver,
                     scriptServices.FileSystemMigrator,
                     scriptServices.ScriptLibraryComposer);

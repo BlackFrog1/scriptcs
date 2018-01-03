@@ -2,15 +2,12 @@
 using System.Linq;
 using System.Collections.Generic;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
-using LogLevel = ScriptCs.Contracts.LogLevel;
 
 namespace ScriptCs.Hosting
 {
     public class ScriptServicesBuilder : ServiceOverrides<IScriptServicesBuilder>, IScriptServicesBuilder
     {
-        private readonly ITypeResolver _typeResolver;
-        private readonly ILog _logger;
+        private readonly ILogProvider _logProvider;
 
         private IRuntimeServices _runtimeServices;
         private bool _repl;
@@ -25,17 +22,14 @@ namespace ScriptCs.Hosting
 
         public ScriptServicesBuilder(
             IConsole console,
-            ILog logger,
+            ILogProvider logProvider,
             IRuntimeServices runtimeServices = null,
-            ITypeResolver typeResolver = null,
             IInitializationServices initializationServices = null)
         {
-            InitializationServices = initializationServices ?? new InitializationServices(logger);
+            InitializationServices = initializationServices ?? new InitializationServices(logProvider);
             _runtimeServices = runtimeServices;
-            _typeResolver = typeResolver;
-            _typeResolver = typeResolver ?? new TypeResolver();
             ConsoleInstance = console;
-            _logger = logger;
+            _logProvider = logProvider;
         }
 
         public ScriptServices Build()
@@ -64,7 +58,7 @@ namespace ScriptCs.Hosting
             if (_runtimeServices == null)
             {
                 _runtimeServices = new RuntimeServices(
-                    _logger,
+                    _logProvider,
                     Overrides,
                     ConsoleInstance,
                     _scriptEngineType,
@@ -80,11 +74,7 @@ namespace ScriptCs.Hosting
 
         public IScriptServicesBuilder LoadModules(string extension, params string[] moduleNames)
         {
-            var engineModule = _typeResolver.ResolveType("Mono.Runtime") != null || moduleNames.Contains("mono")
-                ? "mono"
-                : "roslyn";
-
-            moduleNames = moduleNames.Union(new[] { engineModule }).ToArray();
+            moduleNames = moduleNames.Union(new[] { "roslyn" }).ToArray();
 
             var config = new ModuleConfiguration(_cache, _scriptName, _repl, _logLevel, _debug, Overrides);
             var loader = InitializationServices.GetModuleLoader();
@@ -148,9 +138,6 @@ namespace ScriptCs.Hosting
 
         public IConsole ConsoleInstance { get; private set; }
 
-        internal IRuntimeServices RuntimeServices
-        {
-            get { return _runtimeServices; }
-        }
+        internal IRuntimeServices RuntimeServices => _runtimeServices;
     }
 }

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 
 namespace ScriptCs
 {
@@ -12,17 +11,19 @@ namespace ScriptCs
         private readonly ILog _logger;
 
         private readonly IEnumerable<ILineProcessor> _lineProcessors;
+        private readonly IEnumerable<IDirectiveLineProcessor> _directiveLineProcessors; 
 
         private readonly IFileSystem _fileSystem;
 
-        public FilePreProcessor(IFileSystem fileSystem, ILog logger, IEnumerable<ILineProcessor> lineProcessors)
+        public FilePreProcessor(IFileSystem fileSystem, ILogProvider logProvider, IEnumerable<ILineProcessor> lineProcessors)
         {
             Guard.AgainstNullArgument("fileSystem", fileSystem);
-            Guard.AgainstNullArgument("logger", logger);
+            Guard.AgainstNullArgument("logProvider", logProvider);
 
             _fileSystem = fileSystem;
-            _logger = logger;
+            _logger = logProvider.ForCurrentType();
             _lineProcessors = lineProcessors;
+            _directiveLineProcessors = _lineProcessors.OfType<IDirectiveLineProcessor>();
         }
 
         public virtual FilePreProcessorResult ProcessFile(string path)
@@ -55,7 +56,8 @@ namespace ScriptCs
                 Namespaces = context.Namespaces,
                 LoadedScripts = context.LoadedScripts,
                 References = context.References,
-                Code = code
+                Code = code,
+                ScriptPath = context.ScriptPath
             };
         }
 
@@ -81,8 +83,15 @@ namespace ScriptCs
 
             _logger.DebugFormat("Processing {0}...", filename);
 
-            // Add script to loaded collection before parsing to avoid loop.
-            context.LoadedScripts.Add(fullPath);
+            if (context.ScriptPath == null)
+            {
+                context.ScriptPath = fullPath;
+            }
+            else
+            {
+                // Add script to loaded collection before parsing to avoid loop.
+                context.LoadedScripts.Add(fullPath);
+            }
 
             var scriptLines = _fileSystem.ReadFileLines(fullPath).ToList();
 
@@ -103,7 +112,6 @@ namespace ScriptCs
                 var isBeforeCode = index < codeIndex || codeIndex < 0;
 
                 var wasProcessed = _lineProcessors.Any(x => x.ProcessLine(this, context, line, isBeforeCode));
-
                 if (!wasProcessed)
                 {
                     context.BodyLines.Add(line);
@@ -137,10 +145,11 @@ namespace ScriptCs
 
         private bool IsNonDirectiveLine(string line)
         {
-            var directiveLineProcessors =
-                _lineProcessors.OfType<IDirectiveLineProcessor>();
+            line = line.Trim();
+            if (line.StartsWith("//") || line.Equals(string.Empty))
+                return false;
 
-            return line.Trim() != string.Empty && !directiveLineProcessors.Any(lp => lp.Matches(line));
+            return !_directiveLineProcessors.Any(lp => lp.Matches(line));
         }
 
         private static bool IsUsingLine(string line)

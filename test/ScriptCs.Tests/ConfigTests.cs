@@ -1,9 +1,11 @@
-﻿using ScriptCs.Contracts;
-using Should;
+﻿using Should;
 using Xunit.Extensions;
 
 namespace ScriptCs.Tests
 {
+    using ScriptCs.Contracts;
+    using Xunit;
+
     public class ConfigTests
     {
         public class TheApplyMethod

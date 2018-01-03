@@ -6,15 +6,9 @@ namespace ScriptCs.ReplCommands
     {
         private readonly IConsole _console;
 
-        public string Description
-        {
-            get { return "Exits the REPL"; }
-        }
+        public string Description => "Exits the REPL";
 
-        public string CommandName
-        {
-            get { return "exit"; }
-        }
+        public string CommandName => "exit";
 
         public ExitCommand(IConsole console)
         {
@@ -32,8 +26,7 @@ namespace ScriptCs.ReplCommands
 
             while (!responseIsValid)
             {
-                _console.Write("Are you sure you wish to exit? (y/n): ");
-                response = (_console.ReadLine() ?? string.Empty).ToLowerInvariant();
+                 response = (_console.ReadLine("Are you sure you wish to exit? (y/n):") ?? string.Empty).ToLowerInvariant();
                 responseIsValid = response == "y" || response == "n";
             }
 

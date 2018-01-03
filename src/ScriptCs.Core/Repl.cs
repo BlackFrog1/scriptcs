@@ -4,7 +4,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 
 namespace ScriptCs
 {
@@ -13,24 +12,31 @@ namespace ScriptCs
         private readonly string[] _scriptArgs;
 
         private readonly IObjectSerializer _serializer;
+        private readonly Printers _printers;
+        private readonly ILog _log;
 
         public Repl(
             string[] scriptArgs,
             IFileSystem fileSystem,
             IScriptEngine scriptEngine,
             IObjectSerializer serializer,
-            ILog logger,
+            ILogProvider logProvider,
             IScriptLibraryComposer composer,
             IConsole console,
             IFilePreProcessor filePreProcessor,
-            IEnumerable<IReplCommand> replCommands)
-            : base(fileSystem, filePreProcessor, scriptEngine, logger, composer)
+            IEnumerable<IReplCommand> replCommands,
+            Printers printers,
+            IScriptInfo scriptInfo)
+            : base(fileSystem, filePreProcessor, scriptEngine, logProvider, composer, scriptInfo)
         {
-            Guard.AgainstNullArgument("console", console);
             Guard.AgainstNullArgument("serializer", serializer);
-            
+            Guard.AgainstNullArgument("logProvider", logProvider);
+            Guard.AgainstNullArgument("console", console);
+
             _scriptArgs = scriptArgs;
             _serializer = serializer;
+            _printers = printers;
+            _log = logProvider.ForCurrentType();
             Console = console;
             Commands = replCommands != null ? replCommands.Where(x => x.CommandName != null).ToDictionary(x => x.CommandName, x => x) : new Dictionary<string, IReplCommand>();
         }
@@ -44,7 +50,7 @@ namespace ScriptCs
         public override void Terminate()
         {
             base.Terminate();
-            Logger.Debug("Exiting console");
+            _log.Debug("Exiting console");
             Console.Exit();
         }
 
@@ -107,7 +113,7 @@ namespace ScriptCs
                 }
 
                 Console.ForegroundColor = ConsoleColor.Cyan;
-                
+
                 InjectScriptLibraries(FileSystem.CurrentDirectory, preProcessResult, ScriptPackSession.State);
 
                 Buffer = (Buffer == null)
@@ -146,9 +152,7 @@ namespace ScriptCs
                 {
                     Console.ForegroundColor = ConsoleColor.Yellow;
 
-                    var serializedResult = _serializer.Serialize(result.ReturnValue);
-
-                    Console.WriteLine(serializedResult);
+                    Console.WriteLine(_printers.GetStringFor(result.ReturnValue));
                 }
 
                 Buffer = null;

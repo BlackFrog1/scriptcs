@@ -1,5 +1,5 @@
-﻿using ScriptCs.Contracts;
-using ScriptCs.Logging;
+﻿using System;
+using ScriptCs.Contracts;
 
 namespace ScriptCs.Hosting
 {
@@ -17,7 +17,7 @@ namespace ScriptCs.Hosting
 
         IPackageInstaller GetPackageInstaller();
 
-        ILog Logger { get; }
+        ILogProvider LogProvider { get; }
 
         IAppDomainAssemblyResolver GetAppDomainAssemblyResolver();
 

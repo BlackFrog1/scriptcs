@@ -2,10 +2,11 @@
 using System.Globalization;
 using System.IO;
 using Newtonsoft.Json;
-using ScriptCs.Contracts;
 
 namespace ScriptCs
 {
+    using ScriptCs.Contracts;
+
     public class ConfigMask
     {
         public bool? AllowPreRelease { get; set; }
@@ -34,6 +35,8 @@ namespace ScriptCs
 
         public string ScriptName { get; set; }
 
+        public string Eval { get; set; }
+
         public bool? Watch { get; set; }
 
         public static ConfigMask Create(ScriptCsArgs args)
@@ -55,24 +58,16 @@ namespace ScriptCs
                 Repl = args.Repl ? (bool?)true : null,
                 Save = args.Save ? (bool?)true : null,
                 ScriptName = args.ScriptName,
+                Eval = args.Eval,
                 Watch = args.Watch ? (bool?)true : null,
             };
         }
 
-        public static ConfigMask ReadGlobalOrDefault()
-        {
-            return Read(new FileSystem().GlobalOptsFile, true);
-        }
+        public static ConfigMask ReadGlobalOrDefault() => Read(new FileSystem().GlobalOptsFile, true);
 
-        public static ConfigMask ReadLocalOrDefault()
-        {
-            return Read(Constants.ConfigFilename, true);
-        }
+        public static ConfigMask ReadLocalOrDefault() => Read(Constants.ConfigFilename, true);
 
-        public static ConfigMask Read(string path)
-        {
-            return Read(path, false);
-        }
+        public static ConfigMask Read(string path) => Read(path, false);
 
         private static ConfigMask Read(string path, bool defaultIfNotExists)
         {

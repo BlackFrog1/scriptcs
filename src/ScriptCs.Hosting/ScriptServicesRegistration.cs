@@ -3,20 +3,24 @@ using System.Collections.Generic;
 using System.Linq;
 using ScriptCs.Contracts;
 using Autofac;
-using ScriptCs.Logging;
 
 namespace ScriptCs.Hosting
 {
     public abstract class ScriptServicesRegistration
     {
+        private readonly ILogProvider _logProvider;
+        private readonly ILog _log;
         private readonly IDictionary<Type, object> _overrides;
 
-        public ILog Logger { get; private set; }
+        public ILogProvider LogProvider => _logProvider;
 
-        protected ScriptServicesRegistration(ILog logger, IDictionary<Type, object> overrides)
+        protected ScriptServicesRegistration(ILogProvider logProvider, IDictionary<Type, object> overrides)
         {
+            Guard.AgainstNullArgument("logProvider", logProvider);
+
             _overrides = overrides ?? new Dictionary<Type, object>();
-            Logger = logger;
+            _logProvider = logProvider;
+            _log = _logProvider.ForCurrentType();
         }
 
         protected void RegisterOverrideOrDefault<T>(ContainerBuilder builder, Action<ContainerBuilder> registrationAction)
@@ -26,7 +30,7 @@ namespace ScriptCs.Hosting
             if (_overrides.ContainsKey(typeof(T)))
             {
                 var reg = _overrides[typeof(T)];
-                this.Logger.Debug(string.Format("Registering override: {0}", reg));
+                _log.Debug(string.Format("Registering override: {0}", reg));
 
                 if (reg.GetType().IsSubclassOf(typeof(Type)))
                 {
@@ -39,7 +43,7 @@ namespace ScriptCs.Hosting
             }
             else
             {
-                this.Logger.Debug(string.Format("Registering default: {0}", typeof(T)));
+                _log.Debug(string.Format("Registering default: {0}", typeof(T)));
                 registrationAction(builder);
             }
         }
@@ -74,15 +78,9 @@ namespace ScriptCs.Hosting
 
         private IContainer _container;
 
-        public IContainer Container
-        {
-            get { return _container ?? (_container = CreateContainer()); }
-        }
+        public IContainer Container => _container ?? (_container = CreateContainer());
 
-        protected IDictionary<Type, object> Overrides
-        {
-            get { return _overrides; }
-        }
+        protected IDictionary<Type, object> Overrides => _overrides;
 
         protected abstract IContainer CreateContainer();
     }

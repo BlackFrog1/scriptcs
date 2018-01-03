@@ -1,16 +1,13 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Security.Policy;
 using Moq;
 using Moq.Protected;
-using Ploeh.AutoFixture.Xunit;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using Should;
 using Xunit;
-using Xunit.Extensions;
+using Ploeh.AutoFixture.Xunit2;
 
 namespace ScriptCs.Tests
 {
@@ -107,6 +104,47 @@ namespace ScriptCs.Tests
         public class TheEngineExecuteMethod
         {
             [Theory, ScriptCsAutoData]
+            public void ShouldSetScriptInfo_ScriptPath(
+                [Frozen] Mock<IScriptEngine> scriptEngine,
+                ScriptExecutor scriptExecutor)
+            {
+                scriptEngine.Setup(e => e.Execute(
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<AssemblyReferences>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<ScriptPackSession>()));
+
+                scriptExecutor.Initialize(Enumerable.Empty<string>(), Enumerable.Empty<IScriptPack>());
+
+                var result = new FilePreProcessorResult();
+                result.ScriptPath = "Main.csx";
+                scriptExecutor.EngineExecute("", new string[] {}, result);
+                scriptExecutor.ScriptInfo.ScriptPath.ShouldEqual("Main.csx");
+            }
+
+            [Theory, ScriptCsAutoData]
+            public void ShouldPopulateScriptInfo_LoadedScript(
+                [Frozen] Mock<IScriptEngine> scriptEngine,
+                ScriptExecutor scriptExecutor)
+            {
+                scriptEngine.Setup(e => e.Execute(
+                It.IsAny<string>(),
+                It.IsAny<string[]>(),
+                It.IsAny<AssemblyReferences>(),
+                It.IsAny<IEnumerable<string>>(),
+                It.IsAny<ScriptPackSession>()));
+
+                scriptExecutor.Initialize(Enumerable.Empty<string>(), Enumerable.Empty<IScriptPack>());
+
+                var result = new FilePreProcessorResult();
+                result.ScriptPath = "Main.csx";
+                result.LoadedScripts.Add("Child.csx");
+                scriptExecutor.EngineExecute("", new string[] { }, result);
+                scriptExecutor.ScriptInfo.LoadedScripts.First().ShouldEqual("Child.csx");
+            }
+
+            [Theory, ScriptCsAutoData]
             public void ShouldAddReferenceToEachDestinationFile(
                 [Frozen] Mock<IScriptEngine> scriptEngine,
                 ScriptExecutor scriptExecutor)
@@ -157,15 +195,8 @@ namespace ScriptCs.Tests
                 scriptExecutor.EngineExecute("", new string[] {}, new FilePreProcessorResult());
 
                 // assert
-                scriptEngine.Verify(
-                    e => e.Execute(
-                        It.IsAny<string>(),
-                        It.IsAny<string[]>(),
-                        It.Is<AssemblyReferences>(x => x.Paths
-                            .SequenceEqual(defaultReferences.Union(explicitReferences.Union(destPaths)))),
-                        It.IsAny<IEnumerable<string>>(),
-                        It.IsAny<ScriptPackSession>()),
-                    Times.Once());
+                var expectedReferencePaths = explicitReferences.Union(destPaths).Distinct();
+                expectedReferencePaths.All(path => scriptExecutor.References.Paths.Contains(path)).ShouldBeTrue();
             }
 
             [Theory, ScriptCsAutoData]
@@ -191,7 +222,7 @@ namespace ScriptCs.Tests
 
                 scriptEngine.Verify(
                     s => s.Execute(
-                        code,
+                        "Env.Initialize();" + Environment.NewLine + code,
                         It.IsAny<string[]>(),
                         It.IsAny<AssemblyReferences>(),
                         It.IsAny<IEnumerable<string>>(),
@@ -526,7 +557,7 @@ namespace ScriptCs.Tests
             public void ShouldExitIfPreProcessorResultIsNull(ScriptExecutor executor)
             {
                 executor.InjectScriptLibraries("", _result, _state);
-                _result.Code.ShouldBeEmpty();
+                _result.Code.ShouldEqual("Env.Initialize();" + Environment.NewLine);
             }
 
             [Theory, ScriptCsAutoData]
@@ -545,7 +576,7 @@ namespace ScriptCs.Tests
                 executor.Protected();
                 executor.Setup(e => e.LoadScriptLibraries(It.IsAny<string>())).Returns(_scriptLibrariesPreProcessorResult);
                 executor.Object.InjectScriptLibraries("", _result, _state);
-                _result.Code.ShouldEqual("Test" + Environment.NewLine);
+                _result.Code.ShouldEqual("Test" + Environment.NewLine + "Env.Initialize();" + Environment.NewLine);
             }
 
             [Theory, ScriptCsAutoData]
@@ -585,13 +616,13 @@ namespace ScriptCs.Tests
                 [Frozen] Mock<IFileSystem> fileSystem,
                 [Frozen] Mock<IFilePreProcessor> preProcessor,
                 [Frozen] Mock<IScriptEngine> engine,
-                [Frozen] Mock<ILog> logger,
+                [Frozen] TestLogProvider logProvider,
                 [Frozen] Mock<IScriptLibraryComposer> composer)
             {
                 // arrange
                 fileSystem.Setup(fs => fs.FileExists(It.IsAny<string>())).Returns(true);
                 var executor = new ScriptExecutor(
-                    fileSystem.Object, preProcessor.Object, engine.Object, logger.Object,composer.Object);
+                    fileSystem.Object, preProcessor.Object, engine.Object, logProvider, composer.Object, new ScriptInfo());
 
                 // act
                 executor.LoadScriptLibraries("");
@@ -618,7 +649,6 @@ namespace ScriptCs.Tests
                 executor.References.Assemblies.ShouldContain(assembly1);
                 executor.References.Assemblies.ShouldContain(assembly2);
                 executor.References.Assemblies.ShouldContain(assembly3);
-                executor.References.Assemblies.Count().ShouldEqual(3);
             }
         }
 
@@ -640,7 +670,6 @@ namespace ScriptCs.Tests
                 executor.References.Assemblies.ShouldNotContain(assembly1);
                 executor.References.Assemblies.ShouldNotContain(assembly2);
                 executor.References.Assemblies.ShouldContain(assembly3);
-                executor.References.Assemblies.Count().ShouldEqual(1);
             }
         }
     }

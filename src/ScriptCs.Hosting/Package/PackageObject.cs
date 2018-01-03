@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
+using System.Text.RegularExpressions;
 using NuGet;
 
 using ScriptCs.Contracts;
@@ -49,16 +51,35 @@ namespace ScriptCs.Hosting.Package
 
         public IEnumerable<IPackageObject> Dependencies { get; set; }
 
-        public string FullName
-        {
-            get { return Id + "." + TextVersion; }
-        }
+        public string FullName => Id + "." + TextVersion;
 
         public IEnumerable<string> GetCompatibleDlls(FrameworkName frameworkName)
         {
             var dlls = _package.GetLibFiles().Where(i => i.EffectivePath.EndsWith(Dll) || i.EffectivePath.EndsWith(Exe));
             IEnumerable<IPackageFile> compatibleFiles;
             VersionUtility.TryGetCompatibleItems(frameworkName, dlls, out compatibleFiles);
+
+            // HACK: Delete unnecessary  temporary NuGet files
+            List<string> tempDirectories = new List<string>();
+            foreach (PhysicalPackageFile file in dlls)
+            {
+                var match = Regex.Match(((PhysicalPackageFile)dlls.First()).SourcePath, "(" + Path.Combine(Path.GetTempPath(), "nuget").Replace("\\", "\\\\") + "\\\\[^\\\\]+?)\\\\");
+                if (match.Success && match.Groups.Count > 1)
+                {
+                    tempDirectories.Add(match.Groups[1].Value); 
+                }
+
+            }
+
+            foreach (string directory in tempDirectories.Distinct())
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
+
+            // /HACK
 
             return compatibleFiles != null ? compatibleFiles.Select(i => i.Path) : null;
         }

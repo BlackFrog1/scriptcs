@@ -1,10 +1,10 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Versioning;
 using NuGet;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using IFileSystem = ScriptCs.Contracts.IFileSystem;
 
 namespace ScriptCs.Hosting.Package
@@ -19,12 +19,13 @@ namespace ScriptCs.Hosting.Package
 
         private readonly ILog _logger;
 
-        public PackageContainer(IFileSystem fileSystem, ILog logger)
+        public PackageContainer(IFileSystem fileSystem, ILogProvider logProvider)
         {
             Guard.AgainstNullArgument("fileSystem", fileSystem);
+            Guard.AgainstNullArgument("logProvider", logProvider);
 
             _fileSystem = fileSystem;
-            _logger = logger;
+            _logger = logProvider.ForCurrentType();
         }
 
         public void CreatePackageFile()

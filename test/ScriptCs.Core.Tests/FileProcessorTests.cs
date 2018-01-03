@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using Moq;
 using ScriptCs.Contracts;
 using ScriptCs.Contracts.Exceptions;
-using ScriptCs.Logging;
 using Should;
 using Xunit;
 
@@ -12,6 +12,51 @@ namespace ScriptCs.Tests
 {
     public class FileProcessorTests
     {
+        public class TheParseFileMethod
+        {
+            private readonly Mock<IFileSystem> _fileSystem;
+
+            public TheParseFileMethod()
+            {
+                _fileSystem = new Mock<IFileSystem>();
+                _fileSystem.SetupGet(x => x.NewLine).Returns(Environment.NewLine);
+                _fileSystem.Setup(x => x.ReadFileLines(It.Is<string>(f => f == @"c:\test\main.csx")))
+                           .Returns(new string[] {"main"});
+                _fileSystem.Setup(x => x.ReadFileLines(It.Is<string>(f => f == @"c:\test\child.csx")))
+                           .Returns(new string[] {"child"});
+
+                _fileSystem.Setup(fs => fs.GetFullPath(It.IsAny<string>())).Returns<string>((path) => path);
+            }
+
+            [Fact]
+            public void SetsTheScriptPath()
+            {
+                var path = @"c:\test\main.csx";
+                var processor = GetFilePreProcessor();
+                var context = new FileParserContext();
+                processor.ParseFile(path, context);
+                _fileSystem.Verify(x => x.ReadFileLines(It.Is<string>(f => f == path)), Times.Exactly(1));
+                context.ScriptPath.ShouldEqual(path);
+            }
+
+            [Fact]
+            public void AddsLoadedScripts()
+            {
+                var path = @"c:\test\child.csx";
+                var processor = GetFilePreProcessor();
+                var context = new FileParserContext();
+                context.ScriptPath = @"c:\test\main.csx";
+                processor.ParseFile(path, context);
+                _fileSystem.Verify(x => x.ReadFileLines(It.Is<string>(f => f == path)), Times.Exactly(1));
+                context.LoadedScripts.ShouldContain(path);
+            }
+
+            private IFilePreProcessor GetFilePreProcessor()
+            {
+                return new FilePreProcessor(_fileSystem.Object, new TestLogProvider(), Enumerable.Empty<ILineProcessor>());
+            }
+        }
+
         public class ProcessFileMethod
         {
             private List<string> _file1 = new List<string>
@@ -82,7 +127,7 @@ namespace ScriptCs.Tests
             }
 
             [Fact]
-            public void UsingStateMentsShoulAllBeAtTheTop()
+            public void UsingStateMentsShouldAllBeAtTheTop()
             {
                 var processor = GetFilePreProcessor();
                 var result = processor.ProcessFile("script1.csx");
@@ -112,8 +157,7 @@ namespace ScriptCs.Tests
                 var processor = GetFilePreProcessor();
                 var result = processor.ProcessFile("script1.csx");
 
-                result.LoadedScripts.Count.ShouldEqual(3);
-                result.LoadedScripts.ShouldContain("script1.csx");
+                result.LoadedScripts.Count.ShouldEqual(2);
                 result.LoadedScripts.ShouldContain("script2.csx");
                 result.LoadedScripts.ShouldContain("script4.csx");
             }
@@ -263,7 +307,8 @@ namespace ScriptCs.Tests
                 _fileSystem.Setup(x => x.ReadFileLines("A.csx")).Returns(a.ToArray());
                 _fileSystem.Setup(x => x.ReadFileLines("B.csx")).Returns(b.ToArray());
 
-                Assert.DoesNotThrow(() => GetFilePreProcessor().ProcessFile("A.csx"));
+                var ex = Record.Exception(() => GetFilePreProcessor().ProcessFile("A.csx"));
+                Assert.Null(ex);
             }
 
             [Fact]
@@ -279,7 +324,7 @@ namespace ScriptCs.Tests
                 _fileSystem.Setup(x => x.ReadFileLines(It.Is<string>(f => f == "file.csx"))).Returns(file.ToArray());
 
                 var processor = GetFilePreProcessor();
-                Assert.Throws(typeof(InvalidDirectiveUseException), () => processor.ProcessFile("file.csx"));
+                Assert.Throws<InvalidDirectiveUseException>(() => processor.ProcessFile("file.csx"));
 
                 _fileSystem.Verify(x => x.ReadFileLines(It.Is<string>(i => i == "script4.csx")), Times.Never());
             }
@@ -525,7 +570,7 @@ namespace ScriptCs.Tests
                     new ShebangLineProcessor()
                 };
 
-                return new FilePreProcessor(_fileSystem.Object, Mock.Of<ILog>(), lineProcessors);
+                return new FilePreProcessor(_fileSystem.Object, new TestLogProvider(), lineProcessors);
             }
         }
 
@@ -589,7 +634,7 @@ namespace ScriptCs.Tests
                     new ShebangLineProcessor()
                 };
 
-                return new FilePreProcessor(_fileSystem.Object, Mock.Of<ILog>(), lineProcessors);
+                return new FilePreProcessor(_fileSystem.Object, new TestLogProvider(), lineProcessors);
             }
         }
 
@@ -602,6 +647,22 @@ namespace ScriptCs.Tests
                 _fileSystem = new Mock<IFileSystem>();
                 _fileSystem.SetupGet(x => x.NewLine).Returns(Environment.NewLine);
                 _fileSystem.Setup(fs => fs.GetFullPath(It.IsAny<string>())).Returns<string>((path) => path);
+            }
+
+            [Fact]
+            public void ShouldAllowSingleLineCommentsBeforeDirectives()
+            {
+                var testableDirectiveProcessor = new DirectiveLineProcessorTests.TestableDirectiveLineProcessor(BehaviorAfterCode.Throw);
+                var filePreprocessor = GetFilePreProcessor(testableDirectiveProcessor, new LoadLineProcessor(_fileSystem.Object));
+                var lines = new List<string>
+                    {
+                        "//Test Comment",
+                        "#Test something",
+                        "Console.WriteLine(\"Success\");"
+                    };
+
+                var ex = Record.Exception(() => filePreprocessor.ParseScript(lines, new FileParserContext()));
+                Assert.Null(ex);
             }
 
             [Fact]
@@ -647,7 +708,7 @@ namespace ScriptCs.Tests
                         customDirectiveProcessor
                     };
 
-                return new FilePreProcessor(_fileSystem.Object, Mock.Of<ILog>(), lineProcessors);
+                return new FilePreProcessor(_fileSystem.Object, new TestLogProvider(), lineProcessors);
             }
 
             public class TestableLoadLineProcessor : LoadLineProcessor

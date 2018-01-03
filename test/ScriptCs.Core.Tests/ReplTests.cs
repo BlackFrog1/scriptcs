@@ -4,12 +4,10 @@ using System.IO;
 using System.Linq;
 using Moq;
 using Moq.Protected;
-using Ploeh.AutoFixture.Xunit;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using Should;
 using Xunit;
-using Xunit.Extensions;
+using Ploeh.AutoFixture.Xunit2;
 
 namespace ScriptCs.Tests
 {
@@ -25,7 +23,7 @@ namespace ScriptCs.Tests
                 FileSystem.SetupGet(x => x.DllCacheFolder).Returns(".cache");
                 FileSystem.SetupGet(x => x.PackagesFolder).Returns("scriptcs_packages");
                 ScriptEngine = new Mock<IScriptEngine>();
-                Logger = new Mock<ILog>();
+                LogProvider = new TestLogProvider();
                 ScriptLibraryComposer = new Mock<IScriptLibraryComposer>();
                 ScriptLibraryComposer.SetupGet(p => p.ScriptLibrariesFile).Returns("PackageScripts.csx");
                 Console = new Mock<IConsole>();
@@ -41,7 +39,7 @@ namespace ScriptCs.Tests
 
             public Mock<IScriptEngine> ScriptEngine { get; private set; }
 
-            public Mock<ILog> Logger { get; private set; }
+            public TestLogProvider LogProvider { get; private set; }
 
             public Mock<IConsole> Console { get; private set; }
 
@@ -61,11 +59,13 @@ namespace ScriptCs.Tests
                 mocks.FileSystem.Object,
                 mocks.ScriptEngine.Object,
                 mocks.ObjectSerializer.Object,
-                mocks.Logger.Object,
+                mocks.LogProvider,
                 mocks.ScriptLibraryComposer.Object,
                 mocks.Console.Object,
                 mocks.FilePreProcessor.Object,
-                mocks.ReplCommands.Select(x => x.Object));
+                mocks.ReplCommands.Select(x => x.Object),
+                new Printers(mocks.ObjectSerializer.Object),
+                new ScriptInfo());
         }
 
         public class TheConstructor
@@ -77,7 +77,6 @@ namespace ScriptCs.Tests
                 var repl = GetRepl(mocks);
                 repl.FileSystem.ShouldEqual(mocks.FileSystem.Object);
                 repl.ScriptEngine.ShouldEqual(mocks.ScriptEngine.Object);
-                repl.Logger.ShouldEqual(mocks.Logger.Object);
                 repl.Console.ShouldEqual(mocks.Console.Object);
             }
         }
@@ -189,7 +188,7 @@ namespace ScriptCs.Tests
             {
                 _mocks.ScriptEngine.Verify(
                     x => x.Execute(
-                        "foo",
+                        "Env.Initialize();" + Environment.NewLine + "foo",
                         new string[0],
                         It.Is<AssemblyReferences>(i => i.Assemblies.SequenceEqual(_repl.References.Assemblies)),
                         It.Is<IEnumerable<string>>(i => i.SequenceEqual(_repl.Namespaces)),
@@ -389,8 +388,8 @@ namespace ScriptCs.Tests
                 _repl.Initialize(Enumerable.Empty<string>(), Enumerable.Empty<IScriptPack>());
                 _repl.Execute("#r \"my.dll\"");
 
-                //default references = 9, + 1 we just added
-                _repl.References.Paths.Count().ShouldEqual(10);
+                //default references = 10, + 1 we just added
+                _repl.References.Paths.Count().ShouldEqual(11);
             }
 
             [Fact]

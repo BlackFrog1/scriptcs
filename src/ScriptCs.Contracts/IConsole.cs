@@ -10,7 +10,7 @@ namespace ScriptCs.Contracts
 
         void WriteLine(string value);
 
-        string ReadLine();
+        string ReadLine(string prompt);
 
         void Clear();
 
@@ -19,5 +19,7 @@ namespace ScriptCs.Contracts
         void ResetColor();
 
         ConsoleColor ForegroundColor { get; set; }
+
+        int Width { get; }
     }
 }

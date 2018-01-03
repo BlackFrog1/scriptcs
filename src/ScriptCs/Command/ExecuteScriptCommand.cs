@@ -2,115 +2,53 @@
 using System.IO;
 using System.Linq;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 
 namespace ScriptCs.Command
 {
-    internal class ExecuteScriptCommand : IScriptCommand
+    internal class ExecuteScriptCommand : ExecuteScriptCommandBase, IScriptCommand
     {
-        private readonly string _script;
-        private readonly IFileSystem _fileSystem;
-        private readonly IScriptExecutor _scriptExecutor;
-        private readonly IScriptPackResolver _scriptPackResolver;
-        private readonly ILog _logger;
-        private readonly IAssemblyResolver _assemblyResolver;
-        private readonly IFileSystemMigrator _fileSystemMigrator;
-        private readonly IScriptLibraryComposer _composer;
-
         public ExecuteScriptCommand(
-            string script,
-            string[] scriptArgs,
-            IFileSystem fileSystem,
-            IScriptExecutor scriptExecutor,
-            IScriptPackResolver scriptPackResolver,
-            ILog logger,
-            IAssemblyResolver assemblyResolver,
-            IFileSystemMigrator fileSystemMigrator,
-            IScriptLibraryComposer composer
-            )
+            string script, string[] scriptArgs, 
+            IFileSystem fileSystem, IScriptExecutor scriptExecutor, 
+            IScriptPackResolver scriptPackResolver, 
+            ILogProvider logProvider, 
+            IAssemblyResolver assemblyResolver, 
+            IFileSystemMigrator fileSystemMigrator, 
+            IScriptLibraryComposer composer) : 
+                base(script, scriptArgs, fileSystem, scriptExecutor, scriptPackResolver, logProvider, assemblyResolver, fileSystemMigrator, composer)
         {
-            Guard.AgainstNullArgument("fileSystem", fileSystem);
-            Guard.AgainstNullArgument("scriptExecutor", scriptExecutor);
-            Guard.AgainstNullArgument("scriptPackResolver", scriptPackResolver);
-            Guard.AgainstNullArgument("logger", logger);
-            Guard.AgainstNullArgument("assemblyResolver", assemblyResolver);
-            Guard.AgainstNullArgument("fileSystemMigrator", fileSystemMigrator);
-            Guard.AgainstNullArgument("composer", composer);
-
-            _script = script;
-            ScriptArgs = scriptArgs;
-            _fileSystem = fileSystem;
-            _scriptExecutor = scriptExecutor;
-            _scriptPackResolver = scriptPackResolver;
-            _logger = logger;
-            _assemblyResolver = assemblyResolver;
-            _fileSystemMigrator = fileSystemMigrator;
-            _composer = composer;
         }
 
-        public string[] ScriptArgs { get; private set; }
-
-        public CommandResult Execute()
+        public override CommandResult Execute()
         {
             try
             {
-                _fileSystemMigrator.Migrate();
+                FileSystemMigrator.Migrate();
 
                 var assemblyPaths = Enumerable.Empty<string>();
-                var workingDirectory = _fileSystem.GetWorkingDirectory(_script);
+                var workingDirectory = FileSystem.GetWorkingDirectory(Script);
                 if (workingDirectory != null)
                 {
-                    assemblyPaths = _assemblyResolver.GetAssemblyPaths(workingDirectory);
+                    assemblyPaths = AssemblyResolver.GetAssemblyPaths(workingDirectory);
                 }
 
-                _composer.Compose(workingDirectory);
+                Composer.Compose(workingDirectory);
 
-                _scriptExecutor.Initialize(assemblyPaths, _scriptPackResolver.GetPacks(), ScriptArgs);
-                var scriptResult = _scriptExecutor.Execute(_script, ScriptArgs);
+                ScriptExecutor.Initialize(assemblyPaths, _scriptPackResolver.GetPacks(), ScriptArgs);
+
+                // HACK: This is a (dirty) fix for #1086. This might be a temporary solution until some further refactoring can be done. 
+                ScriptExecutor.ScriptEngine.CacheDirectory = Path.Combine(workingDirectory ?? FileSystem.CurrentDirectory, FileSystem.DllCacheFolder);
+                var scriptResult = ScriptExecutor.Execute(Script, ScriptArgs);
+
                 var commandResult = Inspect(scriptResult);
-                _scriptExecutor.Terminate();
+                ScriptExecutor.Terminate();
                 return commandResult;
-            }
-            catch (FileNotFoundException ex)
-            {
-                _logger.ErrorFormat("{0} - '{1}'.", ex, ex.Message, ex.FileName);
-                return CommandResult.Error;
             }
             catch (Exception ex)
             {
-                _logger.ErrorException("Error executing script '{0}'", ex, _script);
+                Logger.ErrorException("Error executing script '{0}'", ex, Script);
                 return CommandResult.Error;
             }
-        }
-
-        private CommandResult Inspect(ScriptResult result)
-        {
-            if (result == null)
-            {
-                return CommandResult.Error;
-            }
-
-            if (result.CompileExceptionInfo != null)
-            {
-                var ex = result.CompileExceptionInfo.SourceException;
-                _logger.ErrorException("Script compilation failed.", ex);
-                return CommandResult.Error;
-            }
-
-            if (result.ExecuteExceptionInfo != null)
-            {
-                var ex = result.ExecuteExceptionInfo.SourceException;
-                _logger.ErrorException("Script execution failed.", ex);
-                return CommandResult.Error;
-            }
-
-            if (!result.IsCompleteSubmission)
-            {
-                _logger.Error("The script is incomplete.");
-                return CommandResult.Error;
-            }
-
-            return CommandResult.Success;
         }
     }
 }

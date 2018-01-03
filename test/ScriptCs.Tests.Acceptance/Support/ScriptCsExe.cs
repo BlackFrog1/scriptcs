@@ -6,6 +6,7 @@
     using System.Globalization;
     using System.IO;
     using System.Linq;
+    using System.Text;
 
     public static class ScriptCsExe
     {
@@ -39,6 +40,11 @@
         public static string Run(IEnumerable<string> args, ScenarioDirectory directory)
         {
             return Run(null, true, args, Enumerable.Empty<string>(), directory);
+        }
+
+        public static string Run(IEnumerable<string> args, bool debug, ScenarioDirectory directory)
+        {
+            return Run(null, debug, args, Enumerable.Empty<string>(), directory);
         }
 
         public static string Run(string scriptName, ScenarioDirectory directory)
@@ -141,7 +147,9 @@
                 UseShellExecute = false,
                 CreateNoWindow = true,
                 RedirectStandardOutput = true,
-                RedirectStandardError = true
+                RedirectStandardError = true,
+                StandardErrorEncoding = Encoding.UTF8,
+                StandardOutputEncoding = Encoding.UTF8
             };
             var result = info.Run(Path.GetFileName(directory.Name) + ".log");
             if (result.Item1 != 0)

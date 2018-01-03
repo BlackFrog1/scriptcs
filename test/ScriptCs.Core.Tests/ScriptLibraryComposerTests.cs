@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 using Moq;
 using Moq.Protected;
-using Ploeh.AutoFixture.Xunit;
-using Xunit.Extensions;
 using Should;
+using Xunit;
+using Ploeh.AutoFixture.Xunit2;
 
 namespace ScriptCs.Tests
 {
@@ -44,18 +43,17 @@ namespace ScriptCs.Tests
 
             [Theory, ScriptCsAutoData]
             public void ShouldLogAWarningIfThePackageIsMissing(
-                [Frozen] ILog log,
+                [Frozen] TestLogProvider logProvider,
                 [Frozen] Mock<IPackageContainer> packageContainer,
                 ScriptLibraryComposer composer,
-                Mock<IPackageReference> reference,
-                Mock<IPackageObject> package)
+                Mock<IPackageReference> reference)
             {
                 packageContainer.Setup(c => c.FindPackage(It.IsAny<string>(), It.IsAny<IPackageReference>()))
                     .Returns((IPackageObject)null);
                 reference.SetupGet(r => r.PackageId).Returns("test");
                 composer.ProcessPackage("", reference.Object, new StringBuilder(), new List<string>(), new List<string>());
                 packageContainer.Verify(c => c.FindPackage(It.IsAny<string>(), It.IsAny<IPackageReference>()));
-                ((TestLogger)log).Output.ShouldContain("WARN: Package missing: test");
+                logProvider.Output.ShouldContain("WARN: Package missing: test");
             }
 
             
@@ -80,7 +78,7 @@ namespace ScriptCs.Tests
             public void ShouldWarnIfMultipleMainFilesArePresent(
                 [Frozen] Mock<IPackageContainer> packageContainer,
                 [Frozen] Mock<IFilePreProcessor> preProcessor,
-                [Frozen] ILog log,
+                [Frozen] TestLogProvider logProvider,
                 ScriptLibraryComposer composer,
                 Mock<IPackageReference> reference,
                 Mock<IPackageObject> package)
@@ -91,7 +89,7 @@ namespace ScriptCs.Tests
                 package.Setup(p => p.GetContentFiles()).Returns(new List<string> { "Test1Main.csx", "Test2Main.csx" });
                 preProcessor.Setup(p => p.ProcessFile(It.IsAny<string>())).Returns(new FilePreProcessorResult());
                 composer.ProcessPackage(@"c:\packages", reference.Object, new StringBuilder(), new List<string>(), new List<string>());
-                ((TestLogger) log).Output.ShouldContain(
+                logProvider.Output.ShouldContain(
                     "WARN: Script Libraries in 'Test' ignored due to multiple Main files being present");
             }
 

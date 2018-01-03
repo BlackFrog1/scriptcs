@@ -1,6 +1,5 @@
 ﻿using System;
 using ScriptCs.Contracts;
-using ScriptCs.Logging;
 
 namespace ScriptCs.Command
 {
@@ -23,7 +22,7 @@ namespace ScriptCs.Command
             IFileSystem fileSystem,
             IScriptPackResolver scriptPackResolver,
             IRepl repl,
-            ILog logger,
+            ILogProvider logProvider,
             IConsole console,
             IAssemblyResolver assemblyResolver,
             IFileSystemMigrator fileSystemMigrator,
@@ -32,7 +31,7 @@ namespace ScriptCs.Command
             Guard.AgainstNullArgument("fileSystem", fileSystem);
             Guard.AgainstNullArgument("scriptPackResolver", scriptPackResolver);
             Guard.AgainstNullArgument("repl", repl);
-            Guard.AgainstNullArgument("logger", logger);
+            Guard.AgainstNullArgument("logProvider", logProvider);
             Guard.AgainstNullArgument("console", console);
             Guard.AgainstNullArgument("assemblyResolver", assemblyResolver);
             Guard.AgainstNullArgument("fileSystemMigrator", fileSystemMigrator);
@@ -43,17 +42,14 @@ namespace ScriptCs.Command
             _fileSystem = fileSystem;
             _scriptPackResolver = scriptPackResolver;
             _repl = repl;
-            _logger = logger;
+            _logger = logProvider.ForCurrentType();
             _console = console;
             _assemblyResolver = assemblyResolver;
             _fileSystemMigrator = fileSystemMigrator;
             _composer = composer;
         }
 
-        public string[] ScriptArgs
-        {
-            get { return _scriptArgs; }
-        }
+        public string[] ScriptArgs => _scriptArgs;
 
         public CommandResult Execute()
         {
@@ -103,11 +99,14 @@ namespace ScriptCs.Command
 
         private bool ExecuteLine(IRepl repl)
         {
-            _console.Write(string.IsNullOrWhiteSpace(repl.Buffer) ? "> " : "* ");
-
+            var prompt = string.IsNullOrWhiteSpace (repl.Buffer) ? "> " : "* ";
+            
             try
             {
-                var line = _console.ReadLine();
+                var line = _console.ReadLine(prompt);
+
+                if (line == null)
+                    return false;
 
                 if (!string.IsNullOrWhiteSpace(line))
                 {

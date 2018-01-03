@@ -20,8 +20,8 @@ namespace ScriptCs
 
         public string[] Modules
         {   
-            get { return _modules ?? new string[0]; }
-            set { _modules = value; }
+            get => _modules ?? new string[0];
+            set => _modules = value;
         }
 
         public string OutputFile { get; set; }
@@ -51,6 +51,8 @@ namespace ScriptCs
         public bool Repl { get; set; }
 
         public bool Watch { get; set; }
+
+        public string Eval { get; set; }
 
         public static Config Create(ScriptCsArgs commandArgs)
         {
@@ -96,6 +98,7 @@ namespace ScriptCs
                 Debug = mask.Debug ?? Debug,
                 Repl = mask.Repl ?? Repl,
                 ScriptName = scriptName ?? ScriptName,
+                Eval = mask.Eval ?? Eval,
                 Watch = mask.Watch ?? Watch,
             };
         }
